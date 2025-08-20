@@ -1,9 +1,10 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 
 
-class Neo4jJWTAuthentication(JWTAuthentication):
+class CustomJWTAuthentication(JWTAuthentication):
     def get_user(self, validated_token):
         try:
             user_id = validated_token.get("user_id")
@@ -53,8 +54,6 @@ class Neo4jJWTAuthentication(JWTAuthentication):
 
 
 def create_jwt_token(user):
-    from rest_framework_simplejwt.tokens import RefreshToken
-
     class DummyUser:
         def __init__(self, uid):
             self.id = uid
@@ -62,8 +61,6 @@ def create_jwt_token(user):
 
     dummy_user = DummyUser(user.uid)
     refresh = RefreshToken.for_user(dummy_user)
-
-    # Add custom claims
     refresh["user_id"] = user.uid
     refresh["email"] = user.email
     refresh["user_type"] = user.user_type
