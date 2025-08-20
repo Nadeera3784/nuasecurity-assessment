@@ -1,4 +1,4 @@
-## Grocery Management System (Backend + Frontend)
+## Technical Assessment(Backend + Frontend)
 
 This repository contains a complete take‑home assignment:
 - Backend: Django + DRF + Neo4j graph database (Admin/Supplier, groceries, items, daily income)
@@ -56,9 +56,12 @@ GitHub Actions workflow validates both projects on push/PR (lint, build, backend
 
 ### Next steps (if given more time)
 - API docs via drf-spectacular
-- `partial_update` (PATCH) handlers
-- More negative tests (validation edge cases)
-- GitHub Actions: add ruff/black formatting gate and cache Neo4j download
+- Learn more advance acess pattern with Neo4j
+- Query optimizations
 
-### Links
-- Figma: https://www.figma.com/design/pThG25qGtfzJstJQslN59q/Technical-assessment?node-id=0-1&t=kUXAohER0AF9blpj-1
+- More negative tests (validation edge cases)
+- Admin UI improvement  
+- Admin logic to seperate user level 
+- Build entire database with Neo4j currenty it's hybrid due to lack of experience with Neo4j
+
+
