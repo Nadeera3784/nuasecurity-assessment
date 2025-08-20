@@ -29,6 +29,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "django_admin_kubi",
 ]
 
 LOCAL_APPS = [
@@ -144,7 +145,6 @@ SIMPLE_JWT = {
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
 }
-
 
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:3000",

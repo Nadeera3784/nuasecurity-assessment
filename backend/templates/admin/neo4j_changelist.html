@@ -18,13 +18,48 @@
                 ({{ object_count }} record{{ object_count|pluralize }})
             {% endif %}
         </h2>
+        <div class="submit-row">
+            {% if can_add %}
+                <a href="add/" class="button default">Add {{ model_name }}</a>
+            {% endif %}
+        </div>
+
+        {% if model_name == 'DailyIncome' %}
+        <div class="module" style="margin: 12px 0;">
+            <h3>Daily Income Summary</h3>
+            <p>
+                <strong>Today's Total:</strong>
+                ${{ today_total|default:'0.0' }}
+                &nbsp;|&nbsp;
+                <strong>Grand Total:</strong>
+                ${{ grand_total|default:'0.0' }}
+            </p>
+            {% if daily_totals %}
+            <table id="summary_list">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in daily_totals %}
+                    <tr>
+                        <td>{{ row.date }}</td>
+                        <td>${{ row.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        {% endif %}
         
         {% if error %}
         <div class="messagelist">
             <div class="error">
                 <strong>Error connecting to Neo4j:</strong> {{ error }}
                 <br><br>
-                <em>Make sure Neo4j is running and accessible at bolt://neo4j:password@neo4j:7687</em>
                 <br>
                 <em>Check Docker containers: docker-compose ps</em>
             </div>
@@ -64,10 +99,19 @@
                             {% if obj.user_type %}
                                 <br><small>{{ obj.user_type|capfirst }}</small>
                             {% endif %}
+                            {% if obj.is_deleted %}
+                                <br><span class="badge" style="background:#777; color:#fff;">Archived</span>
+                            {% endif %}
                         </td>
                         <td>{{ obj.created_at|date:"M d, Y H:i" }}</td>
                         <td>
-                            <a href="{{ obj.uid }}/" class="changelink">View Details</a>
+                            <a href="{{ obj.uid }}/" class="changelink">View</a>
+                            &nbsp;|&nbsp;
+                            <a href="{{ obj.uid }}/edit/" class="changelink">Edit</a>
+                            {% if model_name in 'Item Grocery Admin Supplier' %}
+                            &nbsp;|&nbsp;
+                            <a href="{{ obj.uid }}/delete/" class="deletelink" onclick="return confirm('Are you sure? This is a soft delete.');">Delete</a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

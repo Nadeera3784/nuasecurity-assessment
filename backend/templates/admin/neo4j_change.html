@@ -77,6 +77,12 @@
         <a href="../" class="button default">← Back to List</a>
         {% if object_id %}
         <a href="/api/{{ model_name|lower }}s/{{ object_id }}/" class="button" target="_blank">View in API</a>
+        &nbsp;
+        <a href="edit/" class="button">Edit</a>
+        {% if allow_delete %}
+        &nbsp;
+        <a href="delete/" class="deletelink" onclick="return confirm('Are you sure? This is a soft delete.');">Delete</a>
+        {% endif %}
         {% endif %}
     </div>
     {% endif %}

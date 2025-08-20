@@ -2,65 +2,217 @@
 {% load admin_urls static %}
 
 {% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
-
 {% block breadcrumbs %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  :root {
+    --card-bg: #fff;
+    --card-border: #e5e7eb;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-weak: rgba(37, 99, 235, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --muted: #9ca3af;
+      --accent: #60a5fa;
+      --accent-weak: rgba(96, 165, 250, .15);
+    }
+  }
+
+
+  #content-main {
+    padding: 8px;
+  }
+
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: 0 0 .75rem 0;
+    font-weight: 700;
+    letter-spacing: .2px;
+  }
+  .section-head small {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (min-width: 720px) {
+    .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1080px) {
+    .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  /* Card */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 6px 18px -12px rgba(0,0,0,.25);
+    overflow: hidden;
+  }
+  .card header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card header .title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 700;
+  }
+  .pill {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent-weak);
+    color: var(--accent);
+    border: 1px solid var(--card-border);
+  }
+
+  /* Table reset */
+  .card table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .card tbody tr {
+    transition: background .15s ease, transform .05s ease;
+  }
+  .card tbody tr:hover {
+    background: var(--accent-weak);
+  }
+  .cell, .rowhead {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--card-border);
+    vertical-align: middle;
+  }
+  .rowhead a {
+    font-weight: 600;
+  }
+
+  /* Actions */
+  .actions {
+    display: inline-flex;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .link-btn {
+    padding: 5px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    transition: transform .06s ease, background .15s ease, border-color .15s ease;
+    text-decoration: none !important;
+  }
+  .link-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-weak);
+  }
+  .icon {
+    width: 18px; height: 18px; display: inline-block;
+  }
+
+  .caption-note {
+    margin-left: 6px;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 12px;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div id="content-main">
-    <div class="app-list">
-        <div class="module">
-            <table>
-                <caption>
-                    <a href="#" class="section" title="Models in the Grocery Management application">
-                        <strong>Grocery Management System (Neo4j)</strong>
-                    </a>
-                </caption>
-                <tbody>
-                    {% for model in neo4j_models %}
-                    <tr class="model-row">
-                        <th scope="row">
-                            <a href="{% url model.url %}">{{ model.name }}</a>
-                        </th>
-                        <td>
-                            <a href="{% url model.url %}" class="addlink">View {{ model.name }}</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+  <div class="section-head">
+    <span>Overview</span>
+    <small>Quick links to your models</small>
+  </div>
+
+  <div class="card-grid">
+
+    <section class="card">
+      <header>
+        <div class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2a3 3 0 0 1 3 3v1h1a3 3 0 1 1 0 6h-1v1h1a3 3 0 1 1 0 6h-1v1a3 3 0 1 1-6 0v-1H8a3 3 0 1 1 0-6h1v-1H8a3 3 0 1 1 0-6h1V5a3 3 0 0 1 3-3Zm1 4V5a1 1 0 1 0-2 0v1h2Zm0 10h-2v3a1 1 0 1 0 2 0v-3Zm-4-6H8a1 1 0 1 0 0 2h1V10Zm6 0v2h1a1 1 0 1 0 0-2h-1ZM9 14H8a1 1 0 1 0 0 2h1v-2Zm6 0v2h1a1 1 0 1 0 0-2h-1Z"/>
+          </svg>
+          Grocery Management System <span class="caption-note">(Neo4j)</span>
         </div>
-        
-        {% if app_list %}
-        <div class="module">
-            <table>
-                <caption>
-                    <a href="#" class="section" title="Django Built-in Models">
-                        <strong>Django Built-in Models</strong>
-                    </a>
-                </caption>
-                <tbody>
-                    {% for app in app_list %}
-                        {% for model in app.models %}
-                        <tr class="model-{{ model.object_name|lower }}">
-                            <th scope="row">
-                                <a href="{{ model.admin_url }}">{{ model.name }}</a>
-                            </th>
-                            <td>
-                                {% if model.add_url %}
-                                    <a href="{{ model.add_url }}" class="addlink">Add</a>
-                                {% endif %}
-                                {% if model.admin_url %}
-                                    {% if model.add_url %} | {% endif %}
-                                    <a href="{{ model.admin_url }}" class="changelink">Change</a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% endfor %}
-                </tbody>
-            </table>
+        <span class="pill">Graph Models</span>
+      </header>
+
+      <table role="grid" aria-label="Grocery Management System (Neo4j)">
+        <tbody>
+          {% for model in neo4j_models %}
+          <tr class="model-row">
+            <th scope="row" class="rowhead">
+              <a href="{% url model.url %}">{{ model.name }}</a>
+            </th>
+            <td class="cell">
+              <div class="actions">
+                <a href="{% url model.url %}" class="link-btn view">View</a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td class="cell" colspan="2">No Neo4j models available.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    {% if app_list %}
+    <section class="card">
+      <header>
+        <div class="title">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M3 5a2 2 0 0 1 2-2h6l2 2h6a2 2 0 0 1 2 2v1H3V5Zm0 4h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Zm5 2v6h2v-6H8Zm6 0v6h2v-6h-2Z"/>
+          </svg>
+          Django Built‑in Models
         </div>
-        {% endif %}
-    </div>
+        <span class="pill">Admin</span>
+      </header>
+
+      <table role="grid" aria-label="Django Built-in Models">
+        <tbody>
+          {% for app in app_list %}
+            {% for model in app.models %}
+            <tr class="model-{{ model.object_name|lower }}">
+              <th scope="row" class="rowhead">
+                <a href="{{ model.admin_url }}">{{ model.name }}</a>
+              </th>
+              <td class="cell">
+                <div class="actions">
+                  {% if model.add_url %}
+                  <a href="{{ model.add_url }}" class="link-btn add">Add</a>
+                  {% endif %}
+                  {% if model.admin_url %}
+                  <a href="{{ model.admin_url }}" class="link-btn change">Change</a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+  </div>
 </div>
 {% endblock %}

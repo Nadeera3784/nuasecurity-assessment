@@ -1,0 +1,31 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  &rsaquo; {{ model_name }}
+  &rsaquo; {{ title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+  <h1>{{ title }}</h1>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <table>
+      {{ form.as_table }}
+    </table>
+    <div class="submit-row">
+      <input type="submit" value="Save" class="default" />
+      <a href="../" class="button">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+
