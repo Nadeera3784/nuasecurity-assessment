@@ -1,102 +1,64 @@
-# Frontend
+## Grocery Management System (Backend + Frontend)
 
-The frontend is built with Next.js and leverages local storage for data persistence.
+This repository contains a complete take‑home assignment:
+- Backend: Django + DRF + Neo4j graph database (Admin/Supplier, groceries, items, daily income)
+- Frontend: Next.js + shadcn/ui implementing the Figma design and table interactions
 
-## Technologies
-1. Nextjs 
-2. shadcn/ui
-3. Any other libraries, framework might help you.
+### Tech
+- Backend: Django, DRF, neomodel (Neo4j)
+- Frontend: Next.js, shadcn/ui, TypeScript
+- Tooling: Docker Compose, JWT auth, GitHub Actions CI
 
-### Instructions
-1. Look at the figma design link in the links section.
-2. Analyze the UI carefully.
-3. Reflect the prepared design in figma into nextjs application.
-4. Asset you want to test field has two values which are WEB and MOBILE
-5. Bounty eligibility field has two options which are ELIGIBLE and INELIGIBLE
-6. When click on add button, it should a new asset to the program and when click on delete, it should be deleted from the assets list.
-7. If there is already an asset identifier, do not duplicate it.
-8. When click on submit, add the new information in the table.
-
-
-## Local Setup
-
-### Clone the Repository
-
+### Quick start (Docker)
 ```bash
 git clone <repository-url>
-```
-
-### Start the docker
-
-```bash
-docker compose up -d --build
-```
-The application will be available at `http://localhost:3000`
-
-## For a fully functional frontend implementation with PostgreSQL integration, please refer to the followin  [link](https://github.com/Nadeera3784/intigriti) .
-
-
-# Backend
-
-There is a new grocery company that want to create a system that will track each grocery branch that belongs to it by managing the grocery, items, the person in charge of the grocery, and the daily income. The system details is in the requirements section.
-
-## Technologies
-1. Django
-2. Django rest framework
-3. Graph database (neo4j)
-
-## Requirements
-There are two users in the system.
-
-## Admin
-1. Create a new grocery account.
-2. Create a new grocery responsible user account.
-3. Manage the grocery by editing, deleting both accounts.
-4. Manage the items of each grocery with their prices.
-5. Read the daily income of each grocery.
-
-## Grocery responsible user (Supplier)
-1. Add new items to the grocery.
-2. Add the daily income of the grocery.
-
-## Required fields
-1. admin & supplier name
-2. admin & supplier email
-3. admin & supplier password.
-4. create at
-5. update at
-6. grocery name
-7. grocery location
-8. item name
-9. item type (ex: food, game, etc.
-10. item location (ex: first roof, second roof, etc)
-11. daily income
-
-## Constraints
-1. Any action in the system needs an authentication.
-2. A supplier cannot add, edit, delete any item in another grocery.
-3. A supplier can read other groceries items.
-4. Any action will is implemented, the update at will be modified.
-5. The delete action should not delete the item from the whole db, it should soft delete it.
-
-
-
-## Local Setup
-
-### Clone the Repository
-
-```bash
-git clone <repository-url>
-```
-
-### Start the docker
-
-```bash
+cd nuasecurity
 docker compose up -d --build
 ```
 
-Django Admin: http://localhost:8000/admin/ (admin/admin123)
+Services:
+- Frontend: http://localhost:3000
+- API: http://localhost:8000/api/
+- Django Admin: http://localhost:8000/admin/
+- Neo4j Browser: http://localhost:7474 (neo4j/password)
 
-API: http://localhost:8000/api/
+### Credentials
+- Django admin superuser is created by the startup commands (see docker-compose). If missing, run inside backend container:
+```bash
+python manage.py createsuperuser
+```
 
-Neo4j Browser: http://localhost:7474 (neo4j/password)
+### What’s implemented (Backend)
+- Admin can create/update/soft-delete groceries, create/manage suppliers, manage items/prices, and read daily income
+- Supplier can add items and daily income for their assigned grocery; can read items globally but only modify own-grocery items
+- JWT authentication required for all actions; `created_at`/`updated_at` maintained; item delete is soft delete
+- Django Admin UI:
+  - Add/Edit/Delete for Admins, Suppliers, Groceries, Items; Daily Income dashboard with per-day totals
+  - Supplier login sees only Items and Daily Income, scoped to their grocery; archived badge for soft-deleted items
+- Tests: DRF API tests covering auth, permissions, soft delete, and totals. Run with Neo4j in Docker
+
+Run backend tests (locally):
+```bash
+cd backend
+NEO4J_BOLT_URL=bolt://neo4j:password@localhost:7687 python manage.py test api.tests --verbosity 2
+```
+
+### What’s implemented (Frontend)
+- Figma parity screens using shadcn/ui components
+- Assets table interactions:
+  - Add/remove assets inline
+  - Prevent duplicate asset identifiers
+  - Asset type: WEB/MOBILE; Bounty eligibility: ELIGIBLE/INELIGIBLE
+  - Submit persists row to the table
+
+### CI
+GitHub Actions workflow validates both projects on push/PR (lint, build, backend tests against Neo4j).
+
+### Next steps (if given more time)
+- API docs via drf-spectacular
+- `partial_update` (PATCH) handlers
+- More negative tests (validation edge cases)
+- GitHub Actions: add ruff/black formatting gate and cache Neo4j download
+
+### Links
+- Figma: https://www.figma.com/design/pThG25qGtfzJstJQslN59q/Technical-assessment?node-id=0-1&t=kUXAohER0AF9blpj-1
