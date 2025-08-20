@@ -125,3 +125,4 @@ def deactivate_django_user_by_email(email: str) -> None:
             django_user.save()
     except Exception:
         pass
+

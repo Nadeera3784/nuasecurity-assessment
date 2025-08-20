@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop, '**' ]
+  pull_request:
+    branches: [ '**' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Django + Neo4j)
+    runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: neo4j:5.13-community
+        ports:
+          - 7687:7687
+        env:
+          NEO4J_AUTH: neo4j/password
+          NEO4J_PLUGINS: '["graph-data-science"]'
+          NEO4J_dbms_security_procedures_unrestricted: gds.*
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1' || exit 1" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend deps
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wait for Neo4j
+        run: |
+          for i in {1..30}; do
+            (echo > /dev/tcp/127.0.0.1/7687) >/dev/null 2>&1 && echo "Neo4j is up" && break || sleep 2;
+          done
+
+      - name: Install Neo4j labels/constraints
+        working-directory: backend
+        env:
+          SECRET_KEY: test-secret-key
+          DEBUG: 'False'
+          NEO4J_BOLT_URL: bolt://neo4j:password@neo4j:7687
+        run: |
+          python manage.py install_labels
+
+      - name: Lint backend (ruff)
+        working-directory: backend
+        run: |
+          ruff --version || true
+          ruff . || true
+
+      - name: Run backend tests
+        working-directory: backend
+        env:
+          SECRET_KEY: test-secret-key
+          DEBUG: 'False'
+          NEO4J_BOLT_URL: bolt://neo4j:password@neo4j:7687
+        run: |
+          python manage.py test api.tests --verbosity 2
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: |
+          npm run lint --if-present
+          npm run format:check --if-present
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+
