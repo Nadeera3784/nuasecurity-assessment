@@ -1,0 +1,44 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls static i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; Database Statistics
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    {% if error %}
+    <div style="color: red; padding: 20px; text-align: center;">
+        <h2>Database Connection Error</h2>
+        <p>{{ error }}</p>
+        <p><em>Make sure Neo4j is running and accessible.</em></p>
+    </div>
+    {% else %}
+    <h1>Neo4j Database Statistics</h1>
+    
+    <div class="results">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model, count in stats.items %}
+                <tr>
+                    <td style="padding: 10px;"><strong>{{ model }}</strong></td>
+                    <td style="padding: 10px;">{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

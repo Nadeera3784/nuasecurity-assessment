@@ -1,0 +1,84 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls static i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="../">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {{ object.uid|slice:":8" }}...
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    {% if error %}
+    <div class="messagelist">
+        <div class="error">
+            <h3>Error Loading Record</h3>
+            <p>{{ error }}</p>
+            <p><small>This might be due to Neo4j version compatibility issues.</small></p>
+        </div>
+    </div>
+    <div class="submit-row">
+        <a href="../" class="button default">← Back to List</a>
+    </div>
+    {% else %}
+    <h1>{{ model_name }} Details</h1>
+    <p class="help">Record ID: <code>{{ object_id }}</code></p>
+    
+    <div class="form-row">
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f8f8;">
+                    <th style="padding: 12px; border: 1px solid #ddd; width: 200px;">Property</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in object_dict.items %}
+                <tr>
+                    <th style="padding: 10px; border: 1px solid #ddd; background: #f8f8f8; text-align: left;">
+                        {{ key }}
+                    </th>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
+                        {% if 'Uid' in key %}
+                            <code>{{ value }}</code>
+                        {% elif 'Email' in key %}
+                            <a href="mailto:{{ value }}">{{ value }}</a>
+                        {% elif 'Date' in key or 'At' in key %}
+                            <span class="datetime">{{ value }}</span>
+                        {% elif 'Price' in key or 'Amount' in key %}
+                            <strong>${{ value }}</strong>
+                        {% elif 'Is Active' in key or 'Is Deleted' in key %}
+                            {% if value == 'True' %}
+                                <span style="color: green;">✓ Yes</span>
+                            {% else %}
+                                <span style="color: red;">✗ No</span>
+                            {% endif %}
+                        {% else %}
+                            {{ value }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" style="padding: 20px; text-align: center; color: #666;">
+                        No properties found for this record.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="submit-row" style="margin-top: 20px;">
+        <a href="../" class="button default">← Back to List</a>
+        {% if object_id %}
+        <a href="/api/{{ model_name|lower }}s/{{ object_id }}/" class="button" target="_blank">View in API</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

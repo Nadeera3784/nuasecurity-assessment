@@ -1,0 +1,75 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="app-list">
+        <div class="module">
+            <table>
+                <caption>
+                    <a href="#" class="section" title="Models in the Grocery Management application">
+                        <strong>Grocery Management System (Neo4j)</strong>
+                    </a>
+                </caption>
+                <tbody>
+                    {% for model in neo4j_models %}
+                    <tr class="model-row">
+                        <th scope="row">
+                            <a href="{% url model.url %}">{{ model.name }}</a>
+                        </th>
+                        <td>
+                            <a href="{% url model.url %}" class="addlink">View {{ model.name }}</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if app_list %}
+        <div class="module">
+            <table>
+                <caption>
+                    <a href="#" class="section" title="Django Built-in Models">
+                        <strong>Django Built-in Models</strong>
+                    </a>
+                </caption>
+                <tbody>
+                    {% for app in app_list %}
+                        {% for model in app.models %}
+                        <tr class="model-{{ model.object_name|lower }}">
+                            <th scope="row">
+                                <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                            </th>
+                            <td>
+                                {% if model.add_url %}
+                                    <a href="{{ model.add_url }}" class="addlink">Add</a>
+                                {% endif %}
+                                {% if model.admin_url %}
+                                    {% if model.add_url %} | {% endif %}
+                                    <a href="{{ model.admin_url }}" class="changelink">Change</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        <div class="module">
+            <h2>Quick Actions</h2>
+            <ul>
+                <li><a href="{% url 'admin:neo4j_stats' %}">📊 View Database Statistics</a></li>
+                <li><a href="/api/" target="_blank">🌐 API Documentation</a></li>
+                <li><a href="http://localhost:7474" target="_blank">🗄️ Neo4j Browser</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
