@@ -84,12 +84,35 @@ class Neo4jModelAdmin:
         return forms.Form
 
     def changelist_view(self, request):
-        if not (
-            request.user.is_active
-            and (request.user.is_staff or request.user.is_superuser)
-        ):
-            from django.contrib import messages
+        def is_supplier(u):
+            try:
+                from django.contrib.auth.models import Group
 
+                return (
+                    u.is_active
+                    and Group.objects.filter(user=u, name="Supplier").exists()
+                )
+            except Exception:
+                return False
+
+        def is_admin(u):
+            try:
+                from django.contrib.auth.models import Group
+
+                in_supplier_group = Group.objects.filter(
+                    user=u, name="Supplier"
+                ).exists()
+            except Exception:
+                in_supplier_group = False
+            return (
+                u.is_active and (u.is_staff or u.is_superuser) and not in_supplier_group
+            )
+
+        model_name = self.model.__name__
+        if not (
+            is_admin(request.user)
+            or (is_supplier(request.user) and model_name in ["Item", "DailyIncome"])
+        ):
             messages.error(request, "You don't have permission to view this page.")
             return redirect("/admin/")
 
@@ -100,6 +123,37 @@ class Neo4jModelAdmin:
             for obj in objects[:3]:
                 print(f"  - {obj}")
 
+            if is_supplier(request.user) and model_name in ["Item", "DailyIncome"]:
+                try:
+                    login_email = getattr(request.user, "email", None) or getattr(
+                        request.user, "username", None
+                    )
+                    supplier_node = Supplier.nodes.get(email=login_email)
+                    supplier_grocery = supplier_node.responsible_for.single()
+                    if supplier_grocery:
+                        if model_name == "Item":
+                            scoped = []
+                            for it in objects:
+                                try:
+                                    g = it.belongs_to_grocery.single()
+                                    if g and g.uid == supplier_grocery.uid:
+                                        scoped.append(it)
+                                except Exception:
+                                    continue
+                            objects = scoped
+                        else:  # DailyIncome
+                            scoped = []
+                            for inc in objects:
+                                try:
+                                    g = inc.grocery.single()
+                                    if g and g.uid == supplier_grocery.uid:
+                                        scoped.append(inc)
+                                except Exception:
+                                    continue
+                            objects = scoped
+                except Exception:
+                    objects = []
+
             context = {
                 "title": f"{self.model.__name__} List",
                 "objects": objects,
@@ -109,7 +163,6 @@ class Neo4jModelAdmin:
                 "can_add": True,
             }
 
-            # Extra: for DailyIncome, compute daily totals and today's total
             if self.model.__name__ == "DailyIncome":
                 from datetime import datetime
 
@@ -130,7 +183,6 @@ class Neo4jModelAdmin:
                 today_key = str(datetime.utcnow().date())
                 today_total = daily_totals.get(today_key, 0.0)
 
-                # Sort totals by date desc
                 sorted_totals = [
                     {"date": k, "total": v}
                     for k, v in sorted(
@@ -143,7 +195,7 @@ class Neo4jModelAdmin:
                         "daily_totals": sorted_totals,
                         "today_total": today_total,
                         "grand_total": grand_total,
-                        "can_add": False,
+                        "can_add": is_supplier(request.user),
                     }
                 )
             return render(request, "admin/neo4j_changelist.html", context)
@@ -159,12 +211,35 @@ class Neo4jModelAdmin:
             return render(request, "admin/neo4j_changelist.html", context)
 
     def change_view(self, request, object_id):
-        if not (
-            request.user.is_active
-            and (request.user.is_staff or request.user.is_superuser)
-        ):
-            from django.contrib import messages
+        def is_supplier(u):
+            try:
+                from django.contrib.auth.models import Group
 
+                return (
+                    u.is_active
+                    and Group.objects.filter(user=u, name="Supplier").exists()
+                )
+            except Exception:
+                return False
+
+        def is_admin(u):
+            try:
+                from django.contrib.auth.models import Group
+
+                in_supplier_group = Group.objects.filter(
+                    user=u, name="Supplier"
+                ).exists()
+            except Exception:
+                in_supplier_group = False
+            return (
+                u.is_active and (u.is_staff or u.is_superuser) and not in_supplier_group
+            )
+
+        model_name = self.model.__name__
+        if not (
+            is_admin(request.user)
+            or (is_supplier(request.user) and model_name in ["Item", "DailyIncome"])
+        ):
             messages.error(request, "You don't have permission to view this page.")
             return redirect("/admin/")
 
@@ -241,9 +316,34 @@ class Neo4jModelAdmin:
             return render(request, "admin/neo4j_change.html", context)
 
     def add_view(self, request):
+        def is_supplier(u):
+            try:
+                from django.contrib.auth.models import Group
+
+                return (
+                    u.is_active
+                    and Group.objects.filter(user=u, name="Supplier").exists()
+                )
+            except Exception:
+                return False
+
+        def is_admin(u):
+            try:
+                from django.contrib.auth.models import Group
+
+                in_supplier_group = Group.objects.filter(
+                    user=u, name="Supplier"
+                ).exists()
+            except Exception:
+                in_supplier_group = False
+            return (
+                u.is_active and (u.is_staff or u.is_superuser) and not in_supplier_group
+            )
+
+        model_name = self.model.__name__
         if not (
-            request.user.is_active
-            and (request.user.is_staff or request.user.is_superuser)
+            is_admin(request.user)
+            or (is_supplier(request.user) and model_name in ["Item", "DailyIncome"])
         ):
             messages.error(request, "You don't have permission to add records.")
             return redirect("/admin/")
@@ -262,13 +362,62 @@ class Neo4jModelAdmin:
                         obj = Neo4jAdmin(name=data["name"], email=data["email"])
                         obj.set_password(data["password"])
                         obj.save()
+                        try:
+                            from django.contrib.auth.models import (
+                                User as DjangoUser,
+                                Group,
+                            )
+
+                            django_user, _created = DjangoUser.objects.get_or_create(
+                                username=obj.email, defaults={"email": obj.email}
+                            )
+                            django_user.email = obj.email
+                            django_user.first_name = obj.name
+                            django_user.is_active = True
+                            django_user.is_staff = True
+                            django_user.is_superuser = True
+                            django_user.set_password(data["password"])
+                            django_user.save()
+
+                            admin_group, _ = Group.objects.get_or_create(name="Admin")
+                            django_user.groups.add(admin_group)
+                        except Exception as e:
+                            messages.warning(
+                                request,
+                                f"Admin created, but failed to sync Django user: {e}",
+                            )
                     elif self.model.__name__ == "Supplier":
                         obj = Supplier(name=data["name"], email=data["email"])
-                        if data.get("password"):
-                            obj.set_password(data["password"])
-                        else:
-                            obj.set_password("changeme123")
+                        raw_password = data.get("password") or "changeme123"
+                        obj.set_password(raw_password)
                         obj.save()
+                        try:
+                            from django.contrib.auth.models import (
+                                User as DjangoUser,
+                                Group,
+                            )
+
+                            django_user, _created = DjangoUser.objects.get_or_create(
+                                username=obj.email, defaults={"email": obj.email}
+                            )
+                            django_user.email = obj.email
+                            django_user.first_name = obj.name
+                            django_user.is_active = True
+                            django_user.is_staff = False
+                            django_user.is_superuser = False
+                            django_user.set_password(raw_password)
+                            django_user.save()
+
+                            supplier_group, _ = Group.objects.get_or_create(
+                                name="Supplier"
+                            )
+                            django_user.groups.add(supplier_group)
+                        except Exception as e:
+                            messages.warning(
+                                request,
+                                f"Supplier created, but failed to sync Django user: {e}",
+                            )
+
                         grocery_id = data.get("grocery_id")
                         if grocery_id:
                             try:
@@ -287,23 +436,82 @@ class Neo4jModelAdmin:
                             price=data["price"],
                         )
                         obj.save()
-                        grocery_id = data.get("grocery_id")
-                        if grocery_id:
+                        try:
+                            from django.contrib.auth.models import Group
+
+                            is_sup = Group.objects.filter(
+                                user=request.user, name="Supplier"
+                            ).exists()
+                        except Exception:
+                            is_sup = False
+
+                        if is_sup:
                             try:
-                                grocery = Grocery.nodes.get(uid=grocery_id)
-                                grocery.items.connect(obj)
-                            except Grocery.DoesNotExist:
-                                pass
+                                login_email = getattr(
+                                    request.user, "email", None
+                                ) or getattr(request.user, "username", None)
+                                supplier_node = Supplier.nodes.get(email=login_email)
+                                supplier_grocery = (
+                                    supplier_node.responsible_for.single()
+                                )
+                                if not supplier_grocery:
+                                    messages.error(
+                                        request, "No grocery assigned to supplier"
+                                    )
+                                    return redirect(request.path.replace("add/", ""))
+                                supplier_grocery.items.connect(obj)
+                            except Exception:
+                                messages.error(
+                                    request, "Could not assign item to supplier grocery"
+                                )
+                        else:
+                            grocery_id = data.get("grocery_id")
+                            if grocery_id:
+                                try:
+                                    grocery = Grocery.nodes.get(uid=grocery_id)
+                                    grocery.items.connect(obj)
+                                except Grocery.DoesNotExist:
+                                    pass
                     elif self.model.__name__ == "DailyIncome":
                         obj = DailyIncome(date=data["date"], amount=data["amount"])
                         obj.save()
-                        grocery_id = data.get("grocery_id")
-                        if grocery_id:
+                        try:
+                            from django.contrib.auth.models import Group
+
+                            is_sup = Group.objects.filter(
+                                user=request.user, name="Supplier"
+                            ).exists()
+                        except Exception:
+                            is_sup = False
+
+                        if is_sup:
                             try:
-                                grocery = Grocery.nodes.get(uid=grocery_id)
-                                grocery.daily_incomes.connect(obj)
-                            except Grocery.DoesNotExist:
-                                pass
+                                login_email = getattr(
+                                    request.user, "email", None
+                                ) or getattr(request.user, "username", None)
+                                supplier_node = Supplier.nodes.get(email=login_email)
+                                supplier_grocery = (
+                                    supplier_node.responsible_for.single()
+                                )
+                                if not supplier_grocery:
+                                    messages.error(
+                                        request, "No grocery assigned to supplier"
+                                    )
+                                    return redirect(request.path.replace("add/", ""))
+                                supplier_grocery.daily_incomes.connect(obj)
+                            except Exception:
+                                messages.error(
+                                    request,
+                                    "Could not assign income to supplier grocery",
+                                )
+                        else:
+                            grocery_id = data.get("grocery_id")
+                            if grocery_id:
+                                try:
+                                    grocery = Grocery.nodes.get(uid=grocery_id)
+                                    grocery.daily_incomes.connect(obj)
+                                except Grocery.DoesNotExist:
+                                    pass
                     else:
                         messages.error(request, "Unsupported model")
                         return redirect("/admin/")
@@ -311,7 +519,6 @@ class Neo4jModelAdmin:
                     messages.success(
                         request, f"{self.model.__name__} created successfully"
                     )
-                    # redirect to changelist
                     return redirect(request.path.replace("add/", ""))
                 except Exception as e:
                     messages.error(
@@ -328,9 +535,34 @@ class Neo4jModelAdmin:
         return render(request, "admin/neo4j_form.html", context)
 
     def edit_view(self, request, object_id):
+        def is_supplier(u):
+            try:
+                from django.contrib.auth.models import Group
+
+                return (
+                    u.is_active
+                    and Group.objects.filter(user=u, name="Supplier").exists()
+                )
+            except Exception:
+                return False
+
+        def is_admin(u):
+            try:
+                from django.contrib.auth.models import Group
+
+                in_supplier_group = Group.objects.filter(
+                    user=u, name="Supplier"
+                ).exists()
+            except Exception:
+                in_supplier_group = False
+            return (
+                u.is_active and (u.is_staff or u.is_superuser) and not in_supplier_group
+            )
+
+        model_name = self.model.__name__
         if not (
-            request.user.is_active
-            and (request.user.is_staff or request.user.is_superuser)
+            is_admin(request.user)
+            or (is_supplier(request.user) and model_name in ["Item", "DailyIncome"])
         ):
             messages.error(request, "You don't have permission to edit records.")
             return redirect("/admin/")
@@ -358,17 +590,82 @@ class Neo4jModelAdmin:
                         obj.is_active = data.get("is_active", obj.is_active)
                         obj.save()
                     elif self.model.__name__ == "Admin":
+                        old_email = obj.email
                         obj.name = data.get("name", obj.name)
                         obj.email = data.get("email", obj.email)
                         if data.get("password"):
                             obj.set_password(data["password"])
                         obj.save()
+                        try:
+                            from django.contrib.auth.models import (
+                                User as DjangoUser,
+                                Group,
+                            )
+
+                            django_user = (
+                                DjangoUser.objects.filter(username=old_email).first()
+                                or DjangoUser.objects.filter(username=obj.email).first()
+                            )
+                            if django_user is None:
+                                django_user = DjangoUser(
+                                    username=obj.email, email=obj.email
+                                )
+                            django_user.username = obj.email
+                            django_user.email = obj.email
+                            django_user.first_name = obj.name
+                            django_user.is_active = True
+                            django_user.is_staff = True
+                            django_user.is_superuser = True
+                            if data.get("password"):
+                                django_user.set_password(data["password"])
+                            django_user.save()
+
+                            admin_group, _ = Group.objects.get_or_create(name="Admin")
+                            django_user.groups.add(admin_group)
+                        except Exception as e:
+                            messages.warning(
+                                request,
+                                f"Admin updated, but failed to sync Django user: {e}",
+                            )
                     elif self.model.__name__ == "Supplier":
+                        old_email = obj.email
                         obj.name = data.get("name", obj.name)
                         obj.email = data.get("email", obj.email)
                         if data.get("password"):
                             obj.set_password(data["password"])
                         obj.save()
+                        try:
+                            from django.contrib.auth.models import (
+                                User as DjangoUser,
+                                Group,
+                            )
+
+                            django_user = (
+                                DjangoUser.objects.filter(username=old_email).first()
+                                or DjangoUser.objects.filter(username=obj.email).first()
+                            )
+                            if django_user is None:
+                                django_user = DjangoUser(
+                                    username=obj.email, email=obj.email
+                                )
+                            django_user.username = obj.email
+                            django_user.email = obj.email
+                            django_user.first_name = obj.name
+                            django_user.is_staff = False
+                            django_user.is_superuser = False
+                            if data.get("password"):
+                                django_user.set_password(data["password"])
+                            django_user.save()
+
+                            supplier_group, _ = Group.objects.get_or_create(
+                                name="Supplier"
+                            )
+                            django_user.groups.add(supplier_group)
+                        except Exception as e:
+                            messages.warning(
+                                request,
+                                f"Supplier updated, but failed to sync Django user: {e}",
+                            )
                         grocery_id = data.get("grocery_id")
                         if grocery_id is not None:
                             try:
@@ -386,32 +683,50 @@ class Neo4jModelAdmin:
                         if data.get("price") is not None:
                             obj.price = data["price"]
                         obj.save()
-                        grocery_id = data.get("grocery_id")
-                        if grocery_id:
-                            try:
-                                current = obj.belongs_to_grocery.single()
-                                if current and current.uid != grocery_id:
-                                    current.items.disconnect(obj)
-                                new_grocery = Grocery.nodes.get(uid=grocery_id)
-                                new_grocery.items.connect(obj)
-                            except Grocery.DoesNotExist:
-                                pass
+                        try:
+                            from django.contrib.auth.models import Group
+
+                            is_sup = Group.objects.filter(
+                                user=request.user, name="Supplier"
+                            ).exists()
+                        except Exception:
+                            is_sup = False
+                        if not is_sup:
+                            grocery_id = data.get("grocery_id")
+                            if grocery_id:
+                                try:
+                                    current = obj.belongs_to_grocery.single()
+                                    if current and current.uid != grocery_id:
+                                        current.items.disconnect(obj)
+                                    new_grocery = Grocery.nodes.get(uid=grocery_id)
+                                    new_grocery.items.connect(obj)
+                                except Grocery.DoesNotExist:
+                                    pass
                     elif self.model.__name__ == "DailyIncome":
                         if data.get("date"):
                             obj.date = data["date"]
                         if data.get("amount") is not None:
                             obj.amount = data["amount"]
                         obj.save()
-                        grocery_id = data.get("grocery_id")
-                        if grocery_id:
-                            try:
-                                current = obj.grocery.single()
-                                if current and current.uid != grocery_id:
-                                    current.daily_incomes.disconnect(obj)
-                                new_grocery = Grocery.nodes.get(uid=grocery_id)
-                                new_grocery.daily_incomes.connect(obj)
-                            except Grocery.DoesNotExist:
-                                pass
+                        try:
+                            from django.contrib.auth.models import Group
+
+                            is_sup = Group.objects.filter(
+                                user=request.user, name="Supplier"
+                            ).exists()
+                        except Exception:
+                            is_sup = False
+                        if not is_sup:
+                            grocery_id = data.get("grocery_id")
+                            if grocery_id:
+                                try:
+                                    current = obj.grocery.single()
+                                    if current and current.uid != grocery_id:
+                                        current.daily_incomes.disconnect(obj)
+                                    new_grocery = Grocery.nodes.get(uid=grocery_id)
+                                    new_grocery.daily_incomes.connect(obj)
+                                except Grocery.DoesNotExist:
+                                    pass
                     messages.success(
                         request, f"{self.model.__name__} updated successfully"
                     )
@@ -432,9 +747,24 @@ class Neo4jModelAdmin:
         return render(request, "admin/neo4j_form.html", context)
 
     def delete_view(self, request, object_id):
+        def is_supplier(u):
+            try:
+                from django.contrib.auth.models import Group
+
+                return (
+                    u.is_active
+                    and Group.objects.filter(user=u, name="Supplier").exists()
+                )
+            except Exception:
+                return False
+
+        def is_admin(u):
+            return u.is_active and (u.is_staff or u.is_superuser)
+
+        model_name = self.model.__name__
         if not (
-            request.user.is_active
-            and (request.user.is_staff or request.user.is_superuser)
+            is_admin(request.user)
+            or (is_supplier(request.user) and model_name in ["Item", "DailyIncome"])
         ):
             messages.error(request, "You don't have permission to delete records.")
             return redirect("/admin/")
@@ -447,6 +777,30 @@ class Neo4jModelAdmin:
                 if hasattr(obj, "is_active"):
                     obj.is_active = False
                     obj.save()
+                if self.model.__name__ == "Supplier":
+                    try:
+                        from django.contrib.auth.models import User as DjangoUser
+
+                        django_user = DjangoUser.objects.filter(
+                            username=obj.email
+                        ).first()
+                        if django_user:
+                            django_user.is_active = False
+                            django_user.save()
+                    except Exception:
+                        pass
+                if self.model.__name__ == "Admin":
+                    try:
+                        from django.contrib.auth.models import User as DjangoUser
+
+                        django_user = DjangoUser.objects.filter(
+                            username=obj.email
+                        ).first()
+                        if django_user:
+                            django_user.is_active = False
+                            django_user.save()
+                    except Exception:
+                        pass
             else:
                 messages.warning(request, "Delete action not supported for this model")
                 return redirect("../")
@@ -637,14 +991,31 @@ class CustomAdminSite(admin.AdminSite):
             return redirect_to_login(request.get_full_path())
 
         extra_context = extra_context or {}
-        extra_context["neo4j_models"] = [
-            {"name": "Admins", "url": "admin:neo4j_admin_changelist"},
-            {"name": "Suppliers", "url": "admin:neo4j_supplier_changelist"},
-            {"name": "Groceries", "url": "admin:neo4j_grocery_changelist"},
-            {"name": "Items", "url": "admin:neo4j_item_changelist"},
-            {"name": "Daily Income", "url": "admin:neo4j_dailyincome_changelist"},
-            {"name": "Database Stats", "url": "admin:neo4j_stats"},
-        ]
+        try:
+            from django.contrib.auth.models import Group
+
+            is_supplier = Group.objects.filter(
+                user=request.user, name="Supplier"
+            ).exists()
+        except Exception:
+            is_supplier = False
+
+        if is_supplier:
+            menu = [
+                {"name": "Items", "url": "admin:neo4j_item_changelist"},
+                {"name": "Daily Income", "url": "admin:neo4j_dailyincome_changelist"},
+            ]
+        else:
+            menu = [
+                {"name": "Admins", "url": "admin:neo4j_admin_changelist"},
+                {"name": "Suppliers", "url": "admin:neo4j_supplier_changelist"},
+                {"name": "Groceries", "url": "admin:neo4j_grocery_changelist"},
+                {"name": "Items", "url": "admin:neo4j_item_changelist"},
+                {"name": "Daily Income", "url": "admin:neo4j_dailyincome_changelist"},
+                {"name": "Database Stats", "url": "admin:neo4j_stats"},
+            ]
+
+        extra_context["neo4j_models"] = menu
         return super().index(request, extra_context)
 
 
