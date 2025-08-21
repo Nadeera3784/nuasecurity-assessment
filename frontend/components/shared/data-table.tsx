@@ -17,11 +17,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export interface Column<T> {
+export interface Column<T extends object> {
   key: keyof T;
   label: string;
   sortable?: boolean;
-  render?: (value: any, item: T) => ReactNode; //eslint-disable-line
+  render?: (value: T[keyof T], item: T) => ReactNode;
   className?: string;
   headerClassName?: string;
 }
@@ -34,7 +34,7 @@ export interface Action<T> {
   show?: (item: T) => boolean;
 }
 
-export interface DataTableProps<T> {
+export interface DataTableProps<T extends object> {
   data: T[];
   columns: Column<T>[];
   actions?: Action<T>[];
@@ -53,55 +53,57 @@ export interface DataTableProps<T> {
 }
 
 const defaultRenderers = {
-  date: (value: any) => {
-    //eslint-disable-line
+  date: (value: unknown) => {
     if (!value) return "";
-    const date = value instanceof Date ? value : new Date(value);
+    const date =
+      value instanceof Date ? value : new Date(value as string | number | Date);
     return format(date, "MMM dd, yyyy");
   },
 
-  truncate: (value: string, maxLength: number = 15) => {
-    if (!value) return "";
-    return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+  truncate: (value: unknown, maxLength: number = 15) => {
+    if (value === null || value === undefined) return "";
+    const str = String(value);
+    return str.length > maxLength ? `${str.slice(0, maxLength)}...` : str;
   },
 
   badge: (
-    value: string,
+    value: unknown,
     options: {
       variant: Record<string, string>;
       defaultVariant?: string;
     },
   ) => {
+    const key = String(value ?? "");
     const variant =
-      options.variant[value] ||
+      options.variant[key] ||
       options.defaultVariant ||
       "bg-gray-100 text-gray-700";
     return (
       <span
         className={cn("px-2 py-1 rounded-full text-xs font-medium", variant)}
       >
-        {value}
+        {key}
       </span>
     );
   },
 
-  tooltip: (value: string, maxLength: number = 10) => {
-    const truncated = defaultRenderers.truncate(value, maxLength);
-    if (truncated === value) return value;
+  tooltip: (value: unknown, maxLength: number = 10) => {
+    const safe = value === null || value === undefined ? "" : String(value);
+    const truncated = defaultRenderers.truncate(safe, maxLength);
+    if (truncated === safe) return safe;
 
     return (
       <Tooltip>
         <TooltipTrigger>{truncated}</TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          <p>{value}</p>
+          <p>{safe}</p>
         </TooltipContent>
       </Tooltip>
     );
   },
 };
 
-function DataTableRow<T extends Record<string, any>>({
-  //eslint-disable-line
+function DataTableRow<T extends object>({
   item,
   columns,
   actions,
@@ -114,7 +116,9 @@ function DataTableRow<T extends Record<string, any>>({
   getRowKey?: (item: T) => string | number;
   rowClassName?: (item: T) => string;
 }) {
-  const rowKey = getRowKey ? getRowKey(item) : item.id || JSON.stringify(item);
+  const rowKey: string | number = getRowKey
+    ? getRowKey(item)
+    : JSON.stringify(item);
   const className = rowClassName ? rowClassName(item) : "";
 
   return (
@@ -169,27 +173,24 @@ function DataTableRow<T extends Record<string, any>>({
   );
 }
 
-export function DataTable<T extends Record<string, any>>( //eslint-disable-line
-  props: DataTableProps<T>,
-) {
+export function DataTable<T extends object>(props: DataTableProps<T>) {
   return <DataTableComponent {...props} />;
 }
 
-const DataTableHeader = <T extends Record<string, any>>({
-  //eslint-disable-line
+const DataTableHeader = <T extends object>({
   columns,
   actions,
   onSort,
-  currentSort, //eslint-disable-line
   getSortIcon,
   handleSort,
+  currentSort, //eslint-disable-line
 }: {
   columns: Column<T>[];
   actions?: Action<T>[];
   onSort?: (sortBy: keyof T, sortOrder: "asc" | "desc") => void;
-  currentSort?: { field: keyof T; order: "asc" | "desc" };
   getSortIcon: (field: keyof T) => ReactNode;
   handleSort: (field: keyof T) => void;
+  currentSort?: { field: keyof T; order: "asc" | "desc" };
 }) => (
   <thead className="bg-muted/50">
     <tr>
@@ -222,8 +223,7 @@ const DataTableHeader = <T extends Record<string, any>>({
   </thead>
 );
 
-function DataTableComponent<T extends Record<string, any>>({
-  //eslint-disable-line
+function DataTableComponent<T extends object>({
   data,
   columns,
   actions,
@@ -295,7 +295,9 @@ function DataTableComponent<T extends Record<string, any>>({
             {data.map((item) => (
               <DataTableRow
                 key={
-                  getRowKey ? getRowKey(item) : item.id || JSON.stringify(item)
+                  (getRowKey ? getRowKey(item) : JSON.stringify(item)) as
+                    | string
+                    | number
                 }
                 item={item}
                 columns={columns}
