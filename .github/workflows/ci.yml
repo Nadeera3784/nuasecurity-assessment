@@ -55,7 +55,7 @@ jobs:
         env:
           SECRET_KEY: test-secret-key
           DEBUG: 'False'
-          NEO4J_BOLT_URL: bolt://neo4j:password@neo4j:7687
+          NEO4J_BOLT_URL: bolt://neo4j:password@localhost:7687
         run: |
           python manage.py install_labels
 
@@ -70,7 +70,7 @@ jobs:
         env:
           SECRET_KEY: test-secret-key
           DEBUG: 'False'
-          NEO4J_BOLT_URL: bolt://neo4j:password@neo4j:7687
+          NEO4J_BOLT_URL: bolt://neo4j:password@localhost:7687
         run: |
           python manage.py test api.tests --verbosity 2
 
