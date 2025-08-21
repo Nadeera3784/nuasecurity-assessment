@@ -51,6 +51,8 @@ NEO4J_BOLT_URL=bolt://neo4j:password@localhost:7687 python manage.py test api.te
   - Asset type: WEB/MOBILE; Bounty eligibility: ELIGIBLE/INELIGIBLE
   - Submit persists row to the table
 
+### For a fully functional frontend implementation with PostgreSQL integration, please refer to the following  [link](https://github.com/Nadeera3784/intigriti) .
+
 ### CI
 GitHub Actions workflow validates both projects on push/PR (lint, build, backend tests against Neo4j).
 
