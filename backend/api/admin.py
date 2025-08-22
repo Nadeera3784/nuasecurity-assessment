@@ -3,7 +3,6 @@ from django.shortcuts import render, redirect
 from django.urls import path
 from django import forms
 from django.contrib import messages
-from typing import Optional
 
 from .models import Admin as Neo4jAdmin, Supplier, Grocery, Item, DailyIncome
 from .admin_utils import (

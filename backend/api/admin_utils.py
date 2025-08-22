@@ -103,7 +103,7 @@ def sync_django_user_for_supplier(supplier_node: Supplier, raw_password: str) ->
         django_user.email = supplier_node.email
         django_user.first_name = supplier_node.name
         django_user.is_active = True
-        django_user.is_staff = False
+        django_user.is_staff = True
         django_user.is_superuser = False
         if raw_password:
             django_user.set_password(raw_password)
