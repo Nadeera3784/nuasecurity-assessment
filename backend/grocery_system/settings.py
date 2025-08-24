@@ -156,8 +156,12 @@ SIMPLE_JWT = {
 }
 
 # CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-# ]
+# Allow Vite and typical dev ports
+CORS_ALLOWED_ORIGINS = [
+    os.getenv("FRONTEND_ORIGIN", "http://localhost:5173"),
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
-# CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True

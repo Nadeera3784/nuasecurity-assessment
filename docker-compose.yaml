@@ -30,6 +30,31 @@ services:
       timeout: 10s
       retries: 5
 
+  frontend-grocery-system:
+    container_name: frontend-grocery-system
+    build:
+      context: ./frontend-grocery-system
+      dockerfile: dev.Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend-grocery-system:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+      - NODE_ENV=development
+    networks:
+      - nua-network
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   neo4j:
     image: neo4j:5.13-community
     container_name: neo4j
